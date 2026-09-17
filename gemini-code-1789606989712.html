@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>反向 1A2B 猜數字遊戲</title>
+    <style>
+        :root {
+            --primary-color: #4A90E2;
+            --primary-hover: #357ABD;
+            --secondary-color: #F39C12;
+            --secondary-hover: #D68910;
+            --bg-color: #F4F7F6;
+            --card-bg: #FFFFFF;
+            --text-color: #333333;
+            --accent-color: #E74C3C;
+            --success-color: #2ECC71;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            touch-action: manipulation; /* 防止手機雙擊放大 */
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow-x: hidden; /* 防止手機橫向滾動溢出 */
+            background-color: var(--bg-color);
+        }
+
+        body {
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 16px;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 440px; /* 限制寬度適應大部分手機與平板 */
+            padding: 20px;
+            text-align: center;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 6px;
+            color: #2C3E50;
+        }
+
+        p.subtitle {
+            font-size: 0.85rem;
+            color: #7F8C8D;
+            margin-bottom: 20px;
+        }
+
+        .guess-box {
+            background-color: #EBF5FB;
+            border: 2px dashed var(--primary-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .guess-box label {
+            font-size: 0.85rem;
+            color: #555;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .guess-number {
+            font-size: 2.2rem;
+            font-weight: bold;
+            letter-spacing: 4px;
+            color: var(--primary-color);
+            word-break: break-all;
+        }
+
+        /* 彈性佈局適應手機螢幕 */
+        .input-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .select-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        select {
+            padding: 8px 12px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            border: 1.5px solid #CCC;
+            outline: none;
+            background-color: #FFF;
+            min-width: 54px;
+            min-height: 44px; /* 行動觸控最佳高度 */
+            text-align: center;
+        }
+
+        select:focus {
+            border-color: var(--primary-color);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        button {
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.2s, background 0.2s;
+            min-height: 44px; /* 行動觸控最佳高度 */
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            flex: 2;
+        }
+
+        .btn-undo {
+            background-color: var(--secondary-color);
+            flex: 1;
+        }
+
+        .btn-undo:hover:not(:disabled) {
+            background-color: var(--secondary-hover);
+        }
+
+        button:active {
+            opacity: 0.8;
+        }
+
+        button:disabled {
+            background-color: #BDC3C7 !important;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .reset-btn {
+            background-color: #95A5A6;
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        .history {
+            margin-top: 20px;
+            text-align: left;
+            max-height: 160px;
+            overflow-y: auto;
+            border-top: 1px solid #EEE;
+            padding-top: 12px;
+            -webkit-overflow-scrolling: touch; /* 讓手機捲動更平滑 */
+        }
+
+        .history h3 {
+            font-size: 0.9rem;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .history-list {
+            list-style: none;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 0.85rem;
+            border-bottom: 1px dashed #F0F0F0;
+        }
+
+        .message {
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            min-height: 22px;
+            word-wrap: break-word;
+        }
+
+        .error { color: var(--accent-color); }
+        .success { color: var(--success-color); }
+
+        /* 極小螢幕手機微調 (e.g. iPhone SE) */
+        @media (max-width: 360px) {
+            .container {
+                padding: 14px;
+            }
+            .guess-number {
+                font-size: 1.8rem;
+            }
+            button {
+                font-size: 0.85rem;
+                padding: 10px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>反向 1A2B 猜數字</h1>
+    <p class="subtitle">請在心中想好 4 位不重複數字</p>
+
+    <div class="guess-box">
+        <label>電腦第 <span id="round-count">1</span> 次猜測：</label>
+        <div class="guess-number" id="current-guess">----</div>
+    </div>
+
+    <div class="input-group">
+        <div class="select-wrapper">
+            <select id="a-count">
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+            </select> A
+        </div>
+        <div class="select-wrapper">
+            <select id="b-count">
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+            </select> B
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-undo" id="undo-btn" onclick="undoStep()" disabled>↩ 上一步</button>
+            <button class="btn-primary" id="submit-btn" onclick="submitFeedback()">送出提示</button>
+        </div>
+    </div>
+
+    <div class="message" id="message"></div>
+
+    <div class="history">
+        <h3>對答歷史紀錄：</h3>
+        <ul class="history-list" id="history-list"></ul>
+    </div>
+
+    <button class="reset-btn" onclick="initGame()">重新開始遊戲</button>
+</div>
+
+<script>
+    let possibleAnswers = [];
+    let currentGuess = [];
+    let round = 1;
+    let gameOver = false;
+    let historyStack = []; // 保存每一回合狀態的堆疊 (用於實現 Undo)
+
+    // 建立所有 4 位不重複數字組合
+    function createAllAnswers() {
+        const answers = [];
+        for (let a = 0; a < 10; a++) {
+            for (let b = 0; b < 10; b++) {
+                if (a === b) continue;
+                for (let c = 0; c < 10; c++) {
+                    if (a === c || b === c) continue;
+                    for (let d = 0; d < 10; d++) {
+                        if (a === d || b === d || c === d) continue;
+                        answers.push([a, b, c, d]);
+                    }
+                }
+            }
+        }
+        return answers;
+    }
+
+    // 初始化遊戲
+    function initGame() {
+        possibleAnswers = createAllAnswers();
+        round = 1;
+        gameOver = false;
+        historyStack = [];
+        
+        document.getElementById('history-list').innerHTML = '';
+        document.getElementById('message').innerText = '';
+        document.getElementById('message').className = 'message';
+        document.getElementById('submit-btn').disabled = false;
+        document.getElementById('undo-btn').disabled = true;
+        document.getElementById('a-count').value = '0';
+        document.getElementById('b-count').value = '0';
+        
+        makeNextGuess();
+    }
+
+    // 電腦挑選下一個猜測答案
+    function makeNextGuess() {
+        if (possibleAnswers.length === 0) {
+            showMessage("提示矛盾！你是不是給錯 AB 提示了？🤔", "error");
+            document.getElementById('submit-btn').disabled = true;
+            return;
+        }
+
+        // 隨機選擇一個可能答案
+        const randomIndex = Math.floor(Math.random() * possibleAnswers.length);
+        currentGuess = possibleAnswers[randomIndex];
+
+        document.getElementById('current-guess').innerText = currentGuess.join('');
+        document.getElementById('round-count').innerText = round;
+    }
+
+    // 根據 A/B 提示過濾可能性
+    function clearIncorrectAnswers(A, B) {
+        const newPossibleAnswers = [];
+
+        for (let i = 0; i < possibleAnswers.length; i++) {
+            let numA = 0;
+            let numB = 0;
+            const target = possibleAnswers[i];
+
+            for (let j = 0; j < 4; j++) {
+                if (target[j] === currentGuess[j]) {
+                    numA++;
+                } else if (currentGuess.includes(target[j])) {
+                    numB++;
+                }
+            }
+
+            if (numA === A && numB === B) {
+                newPossibleAnswers.push(target);
+            }
+        }
+
+        possibleAnswers = newPossibleAnswers;
+    }
+
+    // 玩家送出提示
+    function submitFeedback() {
+        if (gameOver) return;
+
+        const countA = parseInt(document.getElementById('a-count').value);
+        const countB = parseInt(document.getElementById('b-count').value);
+
+        if (countA + countB > 4) {
+            showMessage("無效提示！A + B 總數不能超過 4。", "error");
+            return;
+        }
+
+        showMessage("", "");
+
+        // 1. 儲存當前狀態至快照堆疊 (Deep Copy 陣列)
+        historyStack.push({
+            possibleAnswers: JSON.parse(JSON.stringify(possibleAnswers)),
+            currentGuess: [...currentGuess],
+            round: round,
+            historyHtml: document.getElementById('history-list').innerHTML
+        });
+
+        // 2. 更新紀錄介面
+        addHistoryRecord(currentGuess.join(''), `${countA}A${countB}B`);
+
+        // 3. 判斷勝負
+        if (countA === 4 && countB === 0) {
+            showMessage(`哈哈！被我猜中了！共猜了 ${round} 次！🎉`, "success");
+            document.getElementById('submit-btn').disabled = true;
+            document.getElementById('undo-btn').disabled = false;
+            gameOver = true;
+            return;
+        }
+
+        // 4. 推進至下一輪
+        clearIncorrectAnswers(countA, countB);
+        round++;
+        makeNextGuess();
+
+        // 啟用返回按鈕
+        document.getElementById('undo-btn').disabled = false;
+    }
+
+    // 返回上一步 (Undo)
+    function undoStep() {
+        if (historyStack.length === 0) return;
+
+        // 取出上一次的狀態快照
+        const lastState = historyStack.pop();
+
+        possibleAnswers = lastState.possibleAnswers;
+        currentGuess = lastState.currentGuess;
+        round = lastState.round;
+        
+        // 還原 UI
+        document.getElementById('history-list').innerHTML = lastState.historyHtml;
+        document.getElementById('current-guess').innerText = currentGuess.join('');
+        document.getElementById('round-count').innerText = round;
+        
+        // 重置狀態與按鈕
+        gameOver = false;
+        document.getElementById('submit-btn').disabled = false;
+        showMessage("已成功返回上一步！", "success");
+
+        if (historyStack.length === 0) {
+            document.getElementById('undo-btn').disabled = true;
+        }
+    }
+
+    // 新增歷史紀錄
+    function addHistoryRecord(guessStr, resultStr) {
+        const historyList = document.getElementById('history-list');
+        const li = document.createElement('li');
+        li.className = 'history-item';
+        li.innerHTML = `<span>第 ${round} 次猜測：<strong>${guessStr}</strong></span> <span>${resultStr}</span>`;
+        historyList.prepend(li);
+    }
+
+    // 顯示訊息
+    function showMessage(msg, type) {
+        const msgEl = document.getElementById('message');
+        msgEl.innerText = msg;
+        msgEl.className = `message ${type}`;
+    }
+
+    // 頁面載入啟動
+    window.onload = initGame;
+</script>
+
+</body>
+</html>
